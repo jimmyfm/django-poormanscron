@@ -19,15 +19,16 @@ class ScheduledTask(models.Model):
     frequency_units = models.IntegerField(_("frequency units"), choices=FREQUENCY_UNIT_CHOICES)
     is_active = models.BooleanField(_("active"))
     is_heavy = models.BooleanField(_("heavy"), help_text=_("Does it require long time to execute? Heavy tasks will be triggered only by bad bots."))
+    is_light = models.BooleanField( ("light"), help_text= ("Does this task takes just couple seconds? Light tasks wille be executed at any request"))
 
     class Meta:
         verbose_name = _("scheduled task")
         verbose_name_plural = _("scheduled tasks")
         ordering = ("command",)
-    
+
     def __unicode__(self):
         return force_unicode(self.command)
-    
+
     def frequency_admin_display(self):
         return ugettext("Every %s %s") % (
             self.frequency,
@@ -36,6 +37,7 @@ class ScheduledTask(models.Model):
     frequency_admin_display.short_description = _("frequency")
 
     def ready_admin_display(self):
-        return datetime.now() > self.next_execution and """<img alt="1" src="/admin/media/img/admin/icon-yes.gif"/>""" or """<img alt="0" src="/admin/media/img/admin/icon-no.gif"/>"""
+        return datetime.now(self.next_execution.tzinfo) > self.next_execution
     ready_admin_display.short_description = _("ready to be called")
     ready_admin_display.allow_tags = True
+    ready_admin_display.boolean = True

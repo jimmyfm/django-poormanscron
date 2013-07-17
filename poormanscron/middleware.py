@@ -1,6 +1,7 @@
 # -*- coding: UTF-8 -*-
 from datetime import datetime, timedelta
 from django.db import models
+from django.core.management import call_command
 ScheduledTask = models.get_model("poormanscron", "ScheduledTask")
 
 class PoorMansCronMiddleware(object):
@@ -17,7 +18,6 @@ class PoorMansCronMiddleware(object):
             is_spambot = getattr(request, "is_spambot", False)
             if is_spambot or "Googlebot" in agent or "Slurp" in agent or "FeedBurner" in agent:
                 now = datetime.now()
-                from django.core.management import call_command
                 tasks_to_execute = ScheduledTask.objects.filter(
                     is_active=True,
                     next_execution__lt=now,
@@ -28,4 +28,17 @@ class PoorMansCronMiddleware(object):
                     call_command(*task.command.split())
                     task.next_execution = now + timedelta(seconds = task.frequency * task.frequency_units)
                     task.save()
+            else:
+                now = datetime.now()
+                tasks = ScheduledTask.objects.filter(
+                    is_active=True,
+                    next_execution__lt=now,
+                    is_light=True,
+                    )[:1]
+                if tasks.count() > 0:
+                    task = tasks[0]
+                    call_command(*task.command.split())
+                    task.next_execution = now + timedelta(seconds=task.frequency * task.frequency_units)
+                    task.save()
+
         return response
